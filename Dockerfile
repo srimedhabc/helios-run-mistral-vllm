@@ -1,21 +1,21 @@
 FROM vllm/vllm-openai:v0.4.2
 
-WORKDIR /app
+ENV HF_HOME=/models
+ENV TRANSFORMERS_CACHE=/models
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 
-# Hugging Face token at build time
-ARG HF_TOKEN
-ENV HF_TOKEN=${HF_TOKEN}
+RUN python3 - << 'EOF'
+from huggingface_hub import snapshot_download
+snapshot_download(
+    repo_id="mistralai/Mistral-7B-Instruct-v0.3",
+    local_dir="/models/mistral",
+    local_dir_use_symlinks=False
+)
+EOF
 
-RUN apt-get update && apt-get install -y git
+EXPOSE 8000
 
-# Login + download model ONCE
-RUN huggingface-cli login --token $HF_TOKEN && \
-    huggingface-cli download \
-    mistralai/Mistral-7B-Instruct-v0.3 \
-    --local-dir /models/mistral \
-    --local-dir-use-symlinks False
-
-COPY handler.py .
-
-CMD ["python3", "handler.py"]
-
+CMD ["python3", "-m", "vllm.entrypoints.openai.api_server", \
+     "--model", "/models/mistral", \
+     "--dtype", "float16", \
+     "--max-model-len", "8192"]
