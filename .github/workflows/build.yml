@@ -31,3 +31,6 @@ jobs:
           context: .
           push: true
           tags: srihelios/mistral-vllm:latest
+          build-args: |
+            HF_TOKEN=${{ secrets.HF_TOKEN }}
+
